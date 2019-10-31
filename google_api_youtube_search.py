@@ -67,6 +67,7 @@ def makeRequestVideos(searchSubject,videoID, youtube, cursor, connection, dur):
         DESCRP = response['items'][0]['snippet']['description']
         CHAN_ID = response['items'][0]['snippet']['channelId']
         CHAN_TITLE = response['items'][0]['snippet']['channelTitle']
+        URL = "https://youtube.com/watch?v=" + videoID
 
         # query to see if video is already in db. If yes, update stats, if no, insert
         cursor.execute("""SELECT * FROM video WHERE v_id = %s;""", (videoID,))
@@ -74,25 +75,27 @@ def makeRequestVideos(searchSubject,videoID, youtube, cursor, connection, dur):
             cursor.execute(
                 """UPDATE video SET likes = %s, dislikes = %s,
                 fav_count = %s, com_count = %s, channel_id = %s,
-                channel_name = %s, "searchQ" = %s, duration = %s WHERE v_id = %s""",
+                channel_name = %s, "searchQ" = %s, duration = %s,
+                url = %s WHERE v_id = %s""",
                 (LIKES,DISLIKES,FAV,COMMENTS, CHAN_ID,CHAN_TITLE,
-                searchSubject,dur, videoID))
+                searchSubject,dur, URL, videoID))
             connection.commit()
             print("Updated Video table")
            
         else:
             cursor.execute(
                     """INSERT INTO video
-                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
                     (TITLE, DESCRP, VIEWS, LIKES, DISLIKES, FAV,
-                     COMMENTS, videoID, CHAN_ID, CHAN_TITLE, searchSubject,dur))
+                     COMMENTS, videoID, CHAN_ID, CHAN_TITLE,
+                     searchSubject,dur, URL))
             connection.commit()
             print("Inserted into Video Table")
     
     except KeyError as e:
         print ("key error:", e)
-    except:
-        print("Something else went wrong")
+##    except:
+##        print("Something else went wrong in MakeVideoRequest")
 
 # retrieve comment threads for a video
 def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
