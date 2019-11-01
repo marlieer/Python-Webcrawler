@@ -107,8 +107,38 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
 
     try:
         response = request.execute()
-        c_id = response['items'][0]['id']
-        makeRequestComments(c_id, youtube, cursor, connection, VIDEO_ID)
+
+        # iterate through comment results, requesting more comment info for each
+        i = 0
+        while response['items'][i]:
+            c_id = response['items'][i]['id']
+            author = response['items'][i]['snippet']['topLevelComment']['snippet']['authorDisplayName']
+            text = response['items'][i]['snippet']['topLevelComment']['snippet']['textDisplay']
+            likes = response['items'][i]['snippet']['topLevelComment']['snippet']['likeCount']
+            published_at = response['items'][i]['snippet']['topLevelComment']['snippet']['publishedAt']
+            updated_at = response['items'][i]['snippet']['topLevelComment']['snippet']['updatedAt']
+
+            cursor.execute("""SELECT * FROM comments WHERE c_id = %s;""", (c_id,))
+            if (cursor.fetchone() is not None):
+                cursor.execute(
+                    """UPDATE comments SET text = %s, likes = %s,
+                    updated_at = %s WHERE c_id = %s""",
+                    (text,likes,updated_at, c_id))
+                connection.commit()
+                print("Updated Comment in data base")
+               
+            else:
+                cursor.execute(
+                        """INSERT INTO comments
+                        VALUES(%s,%s,%s,%s,%s,%s,%s);""",
+                        (c_id, text, likes, author,
+                         VIDEO_ID, published_at,
+                         updated_at))
+                connection.commit()
+                print("Inserted Comment into database")
+                makeRequestComments(c_id, youtube, cursor, connection, VIDEO_ID)
+                i += 1
+            
     except KeyError as e:
         print ("key error:", e)
     except IndexError as e:
@@ -128,30 +158,7 @@ def makeRequestComments(c_id, youtube,cursor,connection, VIDEO_ID):
 
     try:
         response = request.execute()
-        author = response['items'][0]['snippet']['authorDisplayName']
-        text = response['items'][0]['snippet']['textDisplay']
-        likes = response['items'][0]['snippet']['likeCount']
-        published_at = response['items'][0]['snippet']['publishedAt']
-        updated_at = response['items'][0]['snippet']['updatedAt']
-
-        cursor.execute("""SELECT * FROM comments WHERE c_id = %s;""", (c_id,))
-        if (cursor.fetchone() is not None):
-            cursor.execute(
-                """UPDATE comments SET text = %s, likes = %s,
-                updated_at = %s WHERE c_id = %s""",
-                (text,likes,updated_at, c_id))
-            connection.commit()
-            print("Updated Comment in data base")
-           
-        else:
-            cursor.execute(
-                    """INSERT INTO comments
-                    VALUES(%s,%s,%s,%s,%s,%s,%s);""",
-                    (c_id, text, likes, author,
-                     VIDEO_ID, published_at,
-                     updated_at))
-            connection.commit()
-            print("Inserted Comment into database")
+        
     
     except KeyError as e:
         print ("key error:", e)
