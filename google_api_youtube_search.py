@@ -94,8 +94,8 @@ def makeRequestVideos(searchSubject,videoID, youtube, cursor, connection, dur):
     
     except KeyError as e:
         print ("key error:", e)
-##    except:
-##        print("Something else went wrong in MakeVideoRequest")
+    except Exception as e:
+        print("Exception in MakeVideoRequest:", e)
 
 # retrieve comment threads for a video
 def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
@@ -107,16 +107,13 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
 
     try:
         response = request.execute()
-
-        # iterate through comment results, requesting more comment info for each
-        i = 0
-        while response['items'][i]:
-            c_id = response['items'][i]['id']
-            author = response['items'][i]['snippet']['topLevelComment']['snippet']['authorDisplayName']
-            text = response['items'][i]['snippet']['topLevelComment']['snippet']['textDisplay']
-            likes = response['items'][i]['snippet']['topLevelComment']['snippet']['likeCount']
-            published_at = response['items'][i]['snippet']['topLevelComment']['snippet']['publishedAt']
-            updated_at = response['items'][i]['snippet']['topLevelComment']['snippet']['updatedAt']
+        for comment in response['items']:
+            c_id = comment['snippet']['topLevelComment']['id']
+            author = comment['snippet']['topLevelComment']['snippet']['authorDisplayName']
+            text = comment['snippet']['topLevelComment']['snippet']['textOriginal']
+            likes = comment['snippet']['topLevelComment']['snippet']['likeCount']
+            published_at = comment['snippet']['topLevelComment']['snippet']['publishedAt']
+            updated_at = comment['snippet']['topLevelComment']['snippet']['updatedAt']
 
             cursor.execute("""SELECT * FROM comments WHERE c_id = %s;""", (c_id,))
             if (cursor.fetchone() is not None):
@@ -136,34 +133,17 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
                          updated_at))
                 connection.commit()
                 print("Inserted Comment into database")
-                makeRequestComments(c_id, youtube, cursor, connection, VIDEO_ID)
-                i += 1
             
     except KeyError as e:
         print ("key error:", e)
     except IndexError as e:
         print("Index error in MakeRequestCommentThreads:", e)
-    except googleapiclient.errors.HttpError as e:
-        print("Comments disabled:", e)
-        
-
-# search and record comments and comment info for video
-def makeRequestComments(c_id, youtube,cursor,connection, VIDEO_ID):
-    request = youtube.comments().list(
-        part="id, snippet",
-        id=c_id,
-        textFormat="plainText"
-    )
-    
-
-    try:
-        response = request.execute()
-        
-    
-    except KeyError as e:
-        print ("key error:", e)
     except TypeError as e:
         print ("type error:", e)
+    except googleapiclient.errors.HttpError as e:
+        print("Comments disabled:", e)
+    except Exception as e:
+        print("Exception in makeRequestCommentThreads", e)
         
        
 # search for video results
@@ -181,8 +161,8 @@ def makeRequestVideoList(searchSubject,dur):
 
         try:
         # collect data on search results
-            for i in range(0,30):
-                VIDEO_ID = response['items'][i]['id']['videoId']
+            for video in response['items']:
+                VIDEO_ID = video['id']['videoId']
 
                 #for each video, request more video information
                 makeRequestVideos(searchSubject,VIDEO_ID,
@@ -191,6 +171,8 @@ def makeRequestVideoList(searchSubject,dur):
         
         except IndexError as e:
             print("Index error in MakeRequestVideoList:", e)
+        except Exception as e:
+            print("Exception in makeRequestVideoList:", e)
         
         finally:
             closeConnection(connection,cursor)
@@ -199,18 +181,18 @@ def makeRequestVideoList(searchSubject,dur):
 
 def search(searchQ):
     makeRequestVideoList(searchQ,"short")
-    makeRequestVideoList(searchQ + "tutorial","short")
-    makeRequestVideoList(searchQ + "explain","short")
+    makeRequestVideoList(searchQ + " tutorial","short")
+    makeRequestVideoList(searchQ + " explain","short")
     makeRequestVideoList(searchQ,"medium")
-    makeRequestVideoList(searchQ+ "explain","medium")
-    makeRequestVideoList(searchQ + "tutorial","medium")
+    makeRequestVideoList(searchQ+ " explain","medium")
+    makeRequestVideoList(searchQ + " tutorial","medium")
     makeRequestVideoList(searchQ,"long")
-    makeRequestVideoList(searchQ +"explain","long")
-    makeRequestVideoList(searchQ + "tutorial","long")
+    makeRequestVideoList(searchQ +" explain","long")
+    makeRequestVideoList(searchQ + " tutorial","long")
     
 def main():
 # run program to output titles of YouTube videos
-    search("binary tree tutorial")
+    search("binary tree")
 
 if __name__ == "__main__":
     main()

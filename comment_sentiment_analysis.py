@@ -27,17 +27,14 @@ def getSentiment():
         cursor.execute("""SELECT video_id FROM comments WHERE text IS NOT NULL""")
         results = cursor.fetchall()
 
-        i = 0
-        while results[i]:
-            videoId = results[i]
-            print(videoId)
+        for video_id in results:
+            print(video_id)
             sent_model = "lr_sentiment_basic.pkl"
             api_key = "AIzaSyC7OpR3BhPly7MEiy_fQkU_6s7wIMBk77U"
             max_pages_comments = 1
             
             print(yt.video_summary(api_key,videoId, max_pages_comments, sent_model))
 
-            i += 1
     except IndexError as e:
         print("Index Error in GetSentiment:", e)
         
