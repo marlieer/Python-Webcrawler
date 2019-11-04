@@ -4,6 +4,10 @@ import string
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.stem.porter import PorterStemmer
+import re
+
 
 # connect to database
 def connectDb():
@@ -35,18 +39,25 @@ def getSentiment(text):
 # clean text before analyzing sentiment
 def cleanText(text):
 
-    print(text)
     # convert to lower case
     text = text.lower()
 
     #remove punctuation and white spaces
+    text = re.sub(r"[,.;@#?!&$]+\ *", " ", text)
     text = text.translate(str.maketrans('','', string.punctuation)).strip()
 
     # tokenize and remove stop words with nltk
     stop_words = set(stopwords.words('english'))
     tokens = word_tokenize(text)
-    result = [i for i in tokens if not i in stop_words]
-    print(result)
+    text = [i for i in tokens if not i in stop_words]
+
+    # lemmatize
+    lem = WordNetLemmatizer()
+    text = [lem.lemmatize(i) for i in text]
+
+    # stem
+    stemmer = PorterStemmer()
+    text = " ".join([stemmer.stem(i) for i in text])
     
     return text
 
@@ -55,25 +66,25 @@ def retrieveComments():
     try:
         cursor, connection = connectDb()
         cursor.execute("""SELECT text, c_id FROM comments
-            WHERE text IS NOT NULL LIMIT 5""")
+            WHERE text IS NOT NULL""")
         results = cursor.fetchall()
 
         #get sentiment for each comment retrieved
         for result in results:
             text = result[0]
             clean_text = cleanText(text)
-##            sent_analysis = getSentiment(clean_text)
-##            sentiment = sent_analysis['label']
-##            prob_neg = sent_analysis['probability']['neg']
-##            prob_pos = sent_analysis['probability']['pos']
-##            prob_neutral = sent_analysis['probability']['neutral']
-##
-##            cursor.execute("""UPDATE comments SET sentiment = %s,
-##                prob_pos = %s, prob_neg = %s, prob_neutral = %s
-##                WHERE c_id = %s""", (sentiment, prob_pos, prob_neg,
-##                prob_neutral, result[1]))
-##            connection.commit()
-##            print("Updated Comments table with sentiment")
+            sent_analysis = getSentiment(clean_text)
+            sentiment = sent_analysis['label']
+            prob_neg = sent_analysis['probability']['neg']
+            prob_pos = sent_analysis['probability']['pos']
+            prob_neutral = sent_analysis['probability']['neutral']
+
+            cursor.execute("""UPDATE comments SET sentiment = %s,
+                prob_pos = %s, prob_neg = %s, prob_neutral = %s
+                WHERE c_id = %s""", (sentiment, prob_pos, prob_neg,
+                prob_neutral, result[1]))
+            connection.commit()
+            print("Updated Comments table with sentiment")
 
     except IndexError as e:
         print("i: ", i)
