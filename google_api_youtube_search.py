@@ -80,7 +80,7 @@ def makeRequestVideos(searchSubject,videoID, youtube, cursor, connection, dur):
                 (LIKES,DISLIKES,FAV,COMMENTS, CHAN_ID,CHAN_TITLE,
                 searchSubject,dur, URL, videoID))
             connection.commit()
-            print("Updated Video table")
+            #print("Updated Video table")
            
         else:
             cursor.execute(
@@ -122,7 +122,7 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
                     updated_at = %s WHERE c_id = %s""",
                     (text,likes,updated_at, c_id))
                 connection.commit()
-                print("Updated Comment in data base")
+                #print("Updated Comment in data base")
                
             else:
                 cursor.execute(
@@ -153,7 +153,7 @@ def makeRequestVideoList(searchSubject,dur):
             part="snippet,id",
             q=searchSubject,
             type="video",
-            maxResults=30,
+            maxResults=50,
             videoDuration=dur,
         )
         response = request.execute()
