@@ -1,3 +1,6 @@
+# @Marlie Russell 2019 | YouTube Recommender
+# Pulls comments from the database to clean text and analyze sentiment
+
 import requests
 import psycopg2
 import string
@@ -42,10 +45,11 @@ def getSentiment(text):
     except Exception as e:
         print("Exception in getSentiment:", e)
 
+
 # clean text before analyzing sentiment
 def cleanText(text):
     try:
-        print(text)
+
         # convert to lower case
         text = text.lower()
 
@@ -66,7 +70,7 @@ def cleanText(text):
         stemmer = PorterStemmer()
         text = " ".join([stemmer.stem(i) for i in text])
         
-        print (text)
+        return text
 
     except Exception as e:
         print("Error in cleanText:", e)
@@ -76,7 +80,7 @@ def retrieveComments():
     try:
         cursor, connection = connectDb()
         cursor.execute("""SELECT text, c_id FROM comments
-            WHERE text IS NOT NULL LIMIT 10""")
+            WHERE text IS NOT NULL""")
         results = cursor.fetchall()
 
         #get sentiment for each comment retrieved
@@ -97,7 +101,6 @@ def retrieveComments():
                 WHERE c_id = %s""", (clean_text, sentiment, prob_pos, prob_neg,
                 prob_neutral, result[1]))
             connection.commit()
-            print("Updated comment ", result[1])
 
     except IndexError as e:
         print("i: ", i)
