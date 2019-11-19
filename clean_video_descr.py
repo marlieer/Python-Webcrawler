@@ -10,14 +10,14 @@ from connectDb import connect
 def retrieveDescr():
     try:
         cursor, connection = connect()
-        cursor.execute("""SELECT descr,v_id FROM video;""")
+        cursor.execute("SELECT descr,v_id FROM video;")
         results = cursor.fetchall()
 
-        #clean the text for each description retrieved
+        # clean the text for each description retrieved
         for result in results:
             text = result[0]
             clean_text = cleanText(text)
-            if (not (clean_text and clean_text.strip())):
+            if not (clean_text and clean_text.strip()):
                 continue
 
             # update database with cleaned description
@@ -27,12 +27,11 @@ def retrieveDescr():
             print("Success ", result[1])
 
     except IndexError as e:
-        print("i: ", i)
         print("Index Error in retrieveComments:", e)
     except Exception as e:
         print("Error in retrieveComments:", e)
-        print("\nComment ID:" , result[1])
-  
+        print("\nComment ID:", result[1])
+
     finally:
         if (connection):
             cursor.close()
@@ -44,5 +43,5 @@ def main():
     retrieveDescr()
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
