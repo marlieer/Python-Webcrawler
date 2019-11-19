@@ -1,28 +1,14 @@
-# -*- coding: utf-8 -*-
+# @Marlie Russell 2019 | YouTube Recommender
 
 # Expanded from sample Python code for youtube.search.list and youtube.statistics.list
-# See instructions for running these code samples locally:
 # https://developers.google.com/explorer-help/guides/code_samples#python
 import psycopg2
 import os
 import googleapiclient.discovery
+from connectDb import connect
 
 scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
 
-# connect to Database
-def connectDb():
-    try:
-        connection = psycopg2.connect(user = "marlie",
-                                      password = "secret",
-                                      host = "127.0.0.1",
-                                      port = "5433",
-                                      database = "honours")
-        cursor = connection.cursor()
-        
-        return cursor, connection
-
-    except (Exception, psycopg2.Error) as error:
-        print("Error while connecting to Postgres", error)
 
 # close database connection
 def closeConnection(connection, cursor):
@@ -157,7 +143,7 @@ def makeRequestVideoList(searchSubject,dur):
             videoDuration=dur,
         )
         response = request.execute()
-        cursor, connection = connectDb()
+        cursor, connection = connect()
 
         try:
         # collect data on search results

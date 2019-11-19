@@ -10,23 +10,7 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
 import re
-
-
-# connect to database
-def connectDb():
-    try:
-            connection = psycopg2.connect(user = "marlie",
-                                          password = "secret",
-                                          host = "127.0.0.1",
-                                          port = "5433",
-                                          database = "honours")
-            cursor = connection.cursor()
-            print("connection open")
-            
-            return cursor, connection
-
-    except (Exception, psycopg2.Error) as error:
-        print("Error while connecting to Postgres", error)
+from connectDb import connect
 
 
 # sent curl request to get sentiment and probability
@@ -78,9 +62,9 @@ def cleanText(text):
 # retrieve comments from database
 def retrieveComments():
     try:
-        cursor, connection = connectDb()
+        cursor, connection = connect()
         cursor.execute("""SELECT text, c_id FROM comments
-            WHERE text IS NOT NULL""")
+            WHERE text IS NOT NULL LIMIT 5""")
         results = cursor.fetchall()
 
         #get sentiment for each comment retrieved

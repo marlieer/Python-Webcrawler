@@ -1,30 +1,15 @@
 # @Marlie Russell 2019 | YouTube Recommender
 # Cleans video descriptions
+
 import psycopg2
 from comment_sentiment_analysis_API import cleanText
-
-
-# connect to database
-def connectDB():
-    try:
-        connection = psycopg2.connect(user = "marlie",
-                                      password = "secret",
-                                      host = "127.0.0.1",
-                                      port = "5433",
-                                      database = "honours")
-        cursor = connection.cursor()
-        print("connection open")
-        
-        return cursor, connection
-
-    except (Exception, psycopg2.Error) as error:
-        print("Error while connecting to Postgres", error)
+from connectDb import connect
 
 
 # collect all the video descriptions in the database
 def retrieveDescr():
     try:
-        cursor, connection = connectDB()
+        cursor, connection = connect()
         cursor.execute("""SELECT descr,v_id FROM video;""")
         results = cursor.fetchall()
 
