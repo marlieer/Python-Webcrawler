@@ -10,7 +10,7 @@ from connectDb import connect
 def retrieveDescr():
     try:
         cursor, connection = connect()
-        cursor.execute("SELECT descr,v_id FROM video;")
+        cursor.execute("""SELECT descr,v_id FROM video;""")
         results = cursor.fetchall()
 
         # clean the text for each description retrieved

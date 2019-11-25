@@ -83,13 +83,13 @@ def makeRequestVideos(searchSubject,videoID, youtube, cursor, connection, dur):
     except Exception as e:
         print("Exception in MakeVideoRequest:", e)
 
+
 # retrieve comment threads for a video
 def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
     request = youtube.commentThreads().list(
         part="id,snippet",
         videoId=VIDEO_ID,
     )
-    
 
     try:
         response = request.execute()
@@ -121,7 +121,7 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
                 print("Inserted Comment into database")
             
     except KeyError as e:
-        print ("key error:", e)
+        print("key error:", e)
     except IndexError as e:
         print("Index error in MakeRequestCommentThreads:", e)
     except TypeError as e:

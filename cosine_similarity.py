@@ -6,7 +6,6 @@
 
 
 import pandas as pd
-from rake_nltk import Rake
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
@@ -14,17 +13,32 @@ import psycopg2
 from connectDb import connect
 
 
+# generate recommendations based off index
+def recommend(index, df, cosine_sim):
+    try:
+        recommendations = []
+
+        # create Series with similarity scores in descending for first entry
+        score_series = pd.Series(cosine_sim[index]).sort_values(ascending=False)
+        top_5_indexes = list(score_series.iloc[1:5].index)
+        # print(top_5_indexes)
+        for x in range(0, len(top_5_indexes)):
+            recommendations.append(df['url'][x])
+        # print(recommendations)
+    except Exception as e:
+        print("Exception in recommend:", e)
+
+
 # create similarity matrix
 def matrix(df):
-    # all the numeric values
-    df_num = df[['likes', 'dislikes', 'views',
-                 'AVG(prob_pos)', 'AVG(prob_neg)',
-                 'AVG(prob_neutral)']]
-
     # create column 'text' to store a row's title and channel name
     text_list = []
     for index, row in df.iterrows():
-        text_list.append(row['title'] + " " + row['channel_name'].replace(" ", ""))
+        text = row['title'] + " " + row['clean_descr'] + " " + row['channel_name'].replace(" ", "")
+        # add channel name to text multiple times to increase similarity
+        for x in range(0, 11):
+            text += " " + row['channel_name'].replace(" ", "")
+        text_list.append(text)
     df['text'] = text_list
 
     # transform text into count_matrix for similarity between words
@@ -32,19 +46,16 @@ def matrix(df):
     count_matrix = count.fit_transform(df['text'])
 
     # append df_num to df_text and compute cosine similarity
-    doc_term_matrix = count_matrix.todense()
-    df_text = pd.DataFrame(doc_term_matrix, columns=count.get_feature_names())
-    final_df = np.concatenate([df_text,df_num], axis=1)
-    cosine_sim = cosine_similarity(final_df, final_df)
+    cosine_sim = cosine_similarity(count_matrix, count_matrix)
 
+    print(cosine_sim)
+
+    # save as csv
     np.savetxt('cos_sim.csv', cosine_sim)
 
-    # create Series with similarity scores in descending for first entry
-    score_series = pd.Series(cosine_sim[0]).sort_values(ascending=False)
-    top_3_indexes = list(score_series.iloc[1:4].index)
-    print(top_3_indexes)
-    for i in top_3_indexes:
-        print(df['url'][i])
+    # generate recommendations
+    for i in range(len(cosine_sim)):
+        recommend(i, df, cosine_sim)
 
 
 # collect vector inputs
@@ -58,7 +69,9 @@ def collectInputs():
                         AVG(comments.prob_neutral)*100, v_id, url
                         FROM comments join video
                         ON comments.video_id = video.v_id
-                        GROUP BY v_id, video.likes, video.dislikes, views, title LIMIT 15;""")
+                        WHERE "searchQ" = 'control'
+                        GROUP BY v_id, video.likes, video.dislikes, views, title
+                        ORDER BY views desc;""")
         results = cursor.fetchall()
 
         # create DataFrame from Query result

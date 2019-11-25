@@ -64,7 +64,7 @@ def retrieveComments():
     try:
         cursor, connection = connect()
         cursor.execute("""SELECT text, c_id FROM comments
-            WHERE text IS NOT NULL LIMIT 5""")
+            WHERE text IS NOT NULL and clean_text IS NULL""")
         results = cursor.fetchall()
 
         #get sentiment for each comment retrieved
@@ -85,6 +85,8 @@ def retrieveComments():
                 WHERE c_id = %s""", (clean_text, sentiment, prob_pos, prob_neg,
                 prob_neutral, result[1]))
             connection.commit()
+
+            print("success")
 
     except IndexError as e:
         print("i: ", i)
