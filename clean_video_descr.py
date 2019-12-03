@@ -18,7 +18,7 @@ def retrieveDescr():
             text = result[0]
             clean_text = cleanText(text)
             if not (clean_text and clean_text.strip()):
-                continue
+                clean_text = ' '
 
             # update database with cleaned description
             cursor.execute("""UPDATE video SET clean_descr = %s
