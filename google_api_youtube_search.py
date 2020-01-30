@@ -2,20 +2,11 @@
 
 # Expanded from sample Python code for youtube.search.list and youtube.statistics.list
 # https://developers.google.com/explorer-help/guides/code_samples#python
-import psycopg2
 import os
 import googleapiclient.discovery
-from connectDb import connect
+from util import connect, closeConnection
 
 scopes = ["https://www.googleapis.com/auth/youtube.force-ssl"]
-
-
-# close database connection
-def closeConnection(connection, cursor):
-    if (connection):
-        cursor.close()
-        connection.close()
-        print("Postgres connection closed")
 
 
 def credentialVerification():
@@ -33,15 +24,35 @@ def credentialVerification():
     return youtube
 
 
-# search for video statistics and data
-def makeRequestVideos(searchSubject, videoID, youtube, cursor, connection, dur):
+def makeRequestVideos(search_subject, video_id, youtube, dur):
+    """
+        Uses YouTube API to make a request for video data based on video ID parameter.
+        Stores data in database
+
+        :param search_subject: search subject of video (for database entry)
+        :type search_subject: string
+
+        :param video_id: video id of YouTube video
+        :type video_id: string
+
+        :param youtube: youtube API service instance
+        :type youtube: googleapiclient.discovery built instance
+
+        :param dur: duration of video (for database entry)
+        :type dur: string
+
+
+        :returns: void
+    """
+
     # Form request parameter
     request = youtube.videos().list(
         part="statistics, snippet",
-        id=videoID
+        id=video_id
     )
 
     try:
+        cursor, connection = connect()
         response = request.execute()
 
         # collect data on video
@@ -54,44 +65,68 @@ def makeRequestVideos(searchSubject, videoID, youtube, cursor, connection, dur):
         DESCRP = response['items'][0]['snippet']['description']
         CHAN_ID = response['items'][0]['snippet']['channelId']
         CHAN_TITLE = response['items'][0]['snippet']['channelTitle']
-        URL = "https://youtube.com/watch?v=" + videoID
+        URL = "https://youtube.com/watch?v=" + video_id
 
-        # query to see if video is already in db. If yes, update stats, if no, insert
-        cursor.execute("""SELECT * FROM video WHERE v_id = %s;""", (videoID,))
-        if cursor.fetchone() is not None:
-            cursor.execute(
-                """UPDATE video SET likes = %s, dislikes = %s,
-                fav_count = %s, com_count = %s, channel_id = %s,
-                channel_name = %s, "searchQ" = %s, duration = %s,
-                url = %s WHERE v_id = %s""",
-                (LIKES, DISLIKES, FAV, COMMENTS, CHAN_ID, CHAN_TITLE,
-                 searchSubject, dur, URL, videoID))
-            connection.commit()
+        # make sure title matches search subject. If it doesn't, break out of loop
+        if search_subject.lower() in TITLE.lower():
+            # query to see if video is already in db. If yes, update stats, if no, insert
+            cursor.execute("""SELECT * FROM video WHERE v_id = %s;""", (video_id,))
+            if cursor.fetchone() is not None:
+                cursor.execute(
+                    """UPDATE video SET likes = %s, dislikes = %s,
+                    fav_count = %s, com_count = %s, channel_id = %s,
+                    channel_name = %s, "searchQ" = %s, duration = %s,
+                    url = %s WHERE v_id = %s""",
+                    (LIKES, DISLIKES, FAV, COMMENTS, CHAN_ID, CHAN_TITLE,
+                     search_subject, dur, URL, video_id))
+                connection.commit()
+
+            else:
+                cursor.execute(
+                    """INSERT INTO video
+                        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
+                    (TITLE, DESCRP, VIEWS, LIKES, DISLIKES, FAV,
+                     COMMENTS, video_id, CHAN_ID, CHAN_TITLE,
+                     search_subject, dur, URL))
+                connection.commit()
+                print("Inserted into Video Table")
+
+            return True
 
         else:
-            cursor.execute(
-                """INSERT INTO video
-                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
-                (TITLE, DESCRP, VIEWS, LIKES, DISLIKES, FAV,
-                 COMMENTS, videoID, CHAN_ID, CHAN_TITLE,
-                 searchSubject, dur, URL))
-            connection.commit()
-            print("Inserted into Video Table")
+            return False
 
     except KeyError as e:
         print("key error:", e)
     except Exception as e:
         print("Exception in MakeVideoRequest:", e)
+    finally:
+        closeConnection(connection, cursor)
 
 
-# retrieve comment threads for a video
-def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
+def makeRequestCommentThread(video_id, youtube):
+    """
+       Uses YouTube API to make a request for the comment thread for a video.
+       Stores data in database
+
+       :param video_id: video id of YouTube video
+       :type video_id: string
+       
+       :param youtube: youtube API service instance
+       :type youtube: googleapiclient.discovery built instance
+
+       :returns: boolean. True if video inserted into database. False if not
+    """
+
+    # make request for comment thread of video
     request = youtube.commentThreads().list(
         part="id,snippet",
-        videoId=VIDEO_ID,
+        videoId=video_id,
     )
 
     try:
+        cursor, connection = connect()
+
         response = request.execute()
         for comment in response['items']:
             c_id = comment['snippet']['topLevelComment']['id']
@@ -101,7 +136,12 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
             published_at = comment['snippet']['topLevelComment']['snippet']['publishedAt']
             updated_at = comment['snippet']['topLevelComment']['snippet']['updatedAt']
 
+
+            # store comment thread information in the database
+            # make a search to see if comment is already stored in database
             cursor.execute("""SELECT * FROM comments WHERE c_id = %s;""", (c_id,))
+
+            # if comment is returned, update comment information
             if cursor.fetchone() is not None:
                 cursor.execute(
                     """UPDATE comments SET text = %s, likes = %s,
@@ -109,12 +149,13 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
                     (text, likes, updated_at, c_id))
                 connection.commit()
 
+            # otherwise, insert comment into database
             else:
                 cursor.execute(
                     """INSERT INTO comments
                         VALUES(%s,%s,%s,%s,%s,%s,%s);""",
                     (c_id, text, likes, author,
-                     VIDEO_ID, published_at,
+                     video_id, published_at,
                      updated_at))
                 connection.commit()
                 print("Inserted Comment into database")
@@ -129,59 +170,73 @@ def makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection):
         print("Comments disabled:", e)
     except Exception as e:
         print("Exception in makeRequestCommentThreads", e)
+    finally:
+        closeConnection(connection, cursor)
 
 
-# search for video results
-def makeRequestVideoList(searchQ, extension, dur):
+def makeRequestVideoList(search_q, dur):
+    """
+        Uses YouTube API to make a request for a list of videos based on
+        the search query parameter.
+
+        :param search_q: search query subject for video list request
+        :type search_q: string
+
+        :param dur: filters video list to only contain videos of specified duration
+            (ex. short, medium, long)
+        :type dur: string
+
+
+        :returns: void
+    """
+
+    # verify API credentials
     youtube = credentialVerification()
+
+    # request parameters
     request = youtube.search().list(
         part="snippet,id",
-        q=searchQ + extension,
+        q='Intro to Java ' + search_q,
         type="video",
-        maxResults=20,
+        maxResults=15,
         order="relevance",
         videoDuration=dur,
         regionCode="CA",
         relevanceLanguage="en"
     )
     response = request.execute()
-    cursor, connection = connect()
 
     try:
+
         # collect data on search results
         for video in response['items']:
             VIDEO_ID = video['id']['videoId']
 
-            # for each video, request more video information
-            makeRequestVideos(searchQ, VIDEO_ID,
-                              youtube, cursor, connection, dur)
-            makeRequestCommentThread(VIDEO_ID, youtube, cursor, connection)
+            # for each video, request more video information about each video result. Return true if added to database
+            if makeRequestVideos(search_q, VIDEO_ID, youtube, dur):
+                # for each video, request more comment information about each video result
+                makeRequestCommentThread(VIDEO_ID, youtube)
 
     except IndexError as e:
         print("Index error in MakeRequestVideoList:", e)
     except Exception as e:
         print("Exception in makeRequestVideoList:", e)
 
-    finally:
-        closeConnection(connection, cursor)
 
+def search(search_q):
+    """
+    call method makeRequestVideoList using the search query parameter
+    as the search subject as well as an extension ("", " tutorial", " explain")
+    to expand search results.
+    Defines the length of the video to be searched (ie short, medium, long)
 
-def search(searchQ):
-    makeRequestVideoList(searchQ, "", "short")
-    makeRequestVideoList(searchQ, " tutorial", "short")
-    makeRequestVideoList(searchQ, " explain", "short")
-    makeRequestVideoList(searchQ, "", "medium")
-    makeRequestVideoList(searchQ, " explain", "medium")
-    makeRequestVideoList(searchQ, " tutorial", "medium")
-    makeRequestVideoList(searchQ, "", "long")
-    makeRequestVideoList(searchQ, " explain", "long")
-    makeRequestVideoList(searchQ, " tutorial", "long")
+    :param search_q: string which is the search query for YouTube API
+        to obtain videos on that subject
+    :type search_q: string
 
+    :returns: void
+    """
 
-def main():
-    # run program to output titles of YouTube videos
-    search("binary tree")
-
-
-if __name__ == "__main__":
-    main()
+    makeRequestVideoList(search_q, "short")
+    makeRequestVideoList(search_q, "medium")
+    makeRequestVideoList(search_q, "long")

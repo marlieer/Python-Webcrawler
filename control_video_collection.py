@@ -6,19 +6,11 @@
 
 import os
 import googleapiclient.discovery
-from connectDb import connect
+from util import connect, closeConnection
 from google_api_youtube_search import makeRequestCommentThread
 
 
 scopes = ["https://www.googleapis.com/auth/youtube.readonly"]
-
-
-# close database connection
-def closeConnection(connection, cursor):
-    if connection:
-        cursor.close()
-        connection.close()
-        print("Postgres connection closed")
 
 
 # for using the YouTube API

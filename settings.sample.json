@@ -1,0 +1,11 @@
+{
+  "url": "https://canvas.ubc.ca",
+  "token": "11224~x4j1YiVDwNgpM5CPbVKZh3giDsbpQeyVuorPhDNAABjZwZID71PjF9ElBmeteQuz",
+  "token2": "7~kWyNdjiV48YlWKeyNo1kXYfIwVdOsnOgAJKaPJzf2cf9O7fYjlGfszQxX9zmDTvD",
+  "course_id": 46183,
+
+   "weights_ranges_file_name": "Weights.txt",
+   "weights_ranges_file_local": false,
+   "weights_assignment_group_name": "Weights",
+   "weights_assignment_prefix": "Weight_"
+}
