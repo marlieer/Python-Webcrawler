@@ -1,3 +1,5 @@
+import numpy as np
+
 from util import connect, closeConnection
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
@@ -33,8 +35,29 @@ def createMatrix():
 
         # computer user similarity
         user_similarity = cosine_similarity(df)
-        print(user_similarity[3])
-        print(df.iloc[3])
+
+        # append user_id of similar users to list
+        for i in range(0, len(user_similarity)):
+
+            # go through sorted list of a user's similarity to other users
+            similar_users = []
+            for user in sorted(user_similarity[i], reverse=True):
+
+                # get the indexes of the highest similarity users in un-sorted list
+                results = np.where(user_similarity[i] == user)
+
+                # for every index, get the user_id from the original df
+                # and append to similar_users list if it is not already added
+                for r in results[0]:
+                    if df.index.values[r] not in similar_users:
+                        similar_users.append(df.index.values[r])
+
+            text = (",".join(str(x) for x in similar_users[1:(round(len(similar_users)/2))]))
+            print(text)
+            print(int(df.index.values[i]))
+            cursor.execute("""UPDATE users SET similar_users = %s where id = %s""",
+                           (text, int(df.index.values[i])))
+            connection.commit()
 
     except Exception as e:
         print("Exception in getValueforMatrixDimensions: ", e)
