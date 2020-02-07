@@ -47,12 +47,12 @@ def closeConnection(connection, cursor):
 
 def connect():
     try:
-        connection = psycopg2.connect(user="marlie",
+        connection = psycopg2.connect(user="homestead",
                                       password="secret",
                                       host="127.0.0.1",
 
-                                      port="5433",
-                                      database="honours")
+                                      port="54320",
+                                      database="homestead")
         cursor = connection.cursor()
         # connection.setAutoCommit(True)
         print("connection open")
