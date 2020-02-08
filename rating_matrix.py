@@ -1,8 +1,37 @@
-import numpy as np
-
 from util import connect, closeConnection
 from sklearn.metrics.pairwise import cosine_similarity
 import pandas as pd
+
+
+def computeAverUserRatings(df):
+    # compute average user ratings for later user
+    avg_user_ratings = []
+    for i in range(0, len(df.index)):
+
+        # compute average rating
+        avg_rating = 0
+        for j in range(0, len(df.columns)):
+            avg_rating += df.iat[i, j]
+
+        avg_rating /= len(df.columns)
+        avg_user_ratings.append(avg_rating)
+
+    return avg_user_ratings
+
+
+def predictMissingRating(u, df):
+
+    avg_user_ratings = computeAverUserRatings(df)
+    user_avg_rating = avg_user_ratings[u]
+    user_similarity = cosine_similarity(df)
+
+    similar_user_ratings = 0
+    for k in range(0, len(user_similarity[u])):
+        if df.iat[u, k] != 0:
+            weight = user_similarity[u][k]
+            similar_user_ratings += weight * (df.iat[u, k] - avg_user_ratings[k])
+
+    return user_avg_rating + similar_user_ratings
 
 
 def createMatrix():
@@ -24,47 +53,32 @@ def createMatrix():
             columns.append(r[0])
 
         # create empty matrix of users x videos
-        df = pd.DataFrame(0, index=index, columns=columns)
+        df = pd.DataFrame(0, index=index, columns=columns, dtype=float)
 
         # get all user ratings on videos (for data)
         cursor.execute("SELECT id, u_id, v_id, rating from myvideos;")
         results = cursor.fetchall()
         for r in results:
             df.at[r[1], r[2]] = r[3]
-        df.to_csv('rating_matrix.csv', index=True, header=True)
 
-        # computer user similarity
-        user_similarity = cosine_similarity(df)
-
-        # append user_id of similar users to list
-        for i in range(0, len(user_similarity)):
-
-            # go through sorted list of a user's similarity to other users
-            similar_users = []
-            for user in sorted(user_similarity[i], reverse=True):
-
-                # get the indexes of the highest similarity users in un-sorted list
-                results = np.where(user_similarity[i] == user)
-
-                # for every index, get the user_id from the original df
-                # and append to similar_users list if it is not already added
-                for r in results[0]:
-                    if df.index.values[r] not in similar_users:
-                        similar_users.append(df.index.values[r])
-
-            text = (",".join(str(x) for x in similar_users[1:(round(len(similar_users)/2))]))
-            print(text)
-            print(int(df.index.values[i]))
-            cursor.execute("""UPDATE users SET similar_users = %s where id = %s""",
-                           (text, int(df.index.values[i])))
-            connection.commit()
+        return df
 
     except Exception as e:
-        print("Exception in getValueforMatrixDimensions: ", e)
+        print("Exception in createMatrix: ", e)
 
     finally:
         closeConnection(connection, cursor)
 
 
+def estimateMissingRatings(df):
+
+    for u in range(0, len(df.index)):
+        for v in range(0, len(df.columns)):
+            if df.iat[u, v] == 0:
+                df.iat[u, v] = predictMissingRating(u, df)
+
+    df.to_csv('rating_matrix.csv', index=True, header=True)
+
+
 if __name__ == "__main__":
-    createMatrix()
+    estimateMissingRatings(createMatrix())
