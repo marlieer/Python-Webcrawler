@@ -19,7 +19,7 @@ def computeAverUserRatings(df):
     return avg_user_ratings
 
 
-def predictMissingRating(u, df):
+def predictMissingRating(u, v, df):
 
     avg_user_ratings = computeAverUserRatings(df)
     user_avg_rating = avg_user_ratings[u]
@@ -29,9 +29,29 @@ def predictMissingRating(u, df):
     for k in range(0, len(user_similarity[u])):
         if df.iat[u, k] != 0:
             weight = user_similarity[u][k]
-            similar_user_ratings += weight * (df.iat[u, k] - avg_user_ratings[k])
+            similar_user_ratings += weight * (df.iat[k, v] - avg_user_ratings[k])
 
-    return user_avg_rating + similar_user_ratings
+    rating = user_avg_rating + similar_user_ratings
+    if rating > user_avg_rating:
+        user_id = int(df.index.values[u])
+        video_id = str(df.columns.values[v])
+
+        cursor, connection = connect()
+        try:
+            cursor.execute("SELECT v_id FROM recommendations WHERE u_id = %s;", (user_id,))
+            if cursor.fetchone() is None:
+                cursor.execute("INSERT INTO recommendations (u_id, v_id) VALUES (%s, %s);",
+                               (user_id, video_id,))
+                connection.commit()
+
+        except Exception as e:
+            print("Exception while inserting: ", e)
+
+        finally:
+            closeConnection(connection, cursor)
+
+
+    return rating
 
 
 def createMatrix():
@@ -75,7 +95,7 @@ def estimateMissingRatings(df):
     for u in range(0, len(df.index)):
         for v in range(0, len(df.columns)):
             if df.iat[u, v] == 0:
-                df.iat[u, v] = predictMissingRating(u, df)
+                df.iat[u, v] = predictMissingRating(u, v, df)
 
     df.to_csv('rating_matrix.csv', index=True, header=True)
 
