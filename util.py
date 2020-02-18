@@ -2,6 +2,7 @@ import re
 import string
 import psycopg2
 import requests
+import os
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.stem.porter import PorterStemmer
@@ -47,14 +48,10 @@ def closeConnection(connection, cursor):
 
 def connect():
     try:
-        connection = psycopg2.connect(user="homestead",
-                                      password="secret",
-                                      host="127.0.0.1",
-
-                                      port="54320",
-                                      database="homestead")
+        connection_string = "dbname='homestead' user='homestead' password='secret' port='54320'"
+        connection = psycopg2.connect(connection_string, sslmode='require')
         cursor = connection.cursor()
-        # connection.setAutoCommit(True)
+
         print("connection open")
 
         return cursor, connection
