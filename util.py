@@ -49,7 +49,8 @@ def closeConnection(connection, cursor):
 def connect():
     try:
         connection_string = "dbname='homestead' user='homestead' password='secret' port='54320'"
-        connection = psycopg2.connect(connection_string, sslmode='require')
+        db_url = 'postgres://axsovrmiryfhxg:830e4b4bbf9e7bf39ea39f5a42162a07085cb440b38e285c668b8921011dc232@ec2-34-235-108-68.compute-1.amazonaws.com:5432/ddp593t71ru2h8'
+        connection = psycopg2.connect(db_url, sslmode='require')
         cursor = connection.cursor()
 
         print("connection open")

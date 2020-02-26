@@ -178,8 +178,8 @@ def recommend(u, v, df):
     try:
         cursor.execute("SELECT v_id FROM recommendations WHERE u_id = %s and v_id = %s;", (user_id, video_id))
         if cursor.fetchone() is None:
-            cursor.execute("INSERT INTO recommendations (u_id, v_id) VALUES (%s, %s);",
-                           (user_id, video_id,))
+            cursor.execute("INSERT INTO recommendations (u_id, v_id, rank) VALUES (%s, %s, %s);",
+                           (user_id, video_id, df.iat[u, v],))
             connection.commit()
 
     except Exception as e:
@@ -189,5 +189,10 @@ def recommend(u, v, df):
         closeConnection(connection, cursor)
 
 
+def beginRating():
+    df = createMatrix()
+    estimateMissingRatings(df)
+
+
 if __name__ == "__main__":
-    estimateMissingRatings(createMatrix())
+    beginRating()

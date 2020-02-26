@@ -67,34 +67,27 @@ def makeRequestVideos(search_subject, video_id, youtube, dur):
         CHAN_TITLE = response['items'][0]['snippet']['channelTitle']
         URL = "https://youtube.com/watch?v=" + video_id
 
-        # make sure title matches search subject. If it doesn't, break out of loop
-        if search_subject.lower() in TITLE.lower():
-            # query to see if video is already in db. If yes, update stats, if no, insert
-            cursor.execute("""SELECT * FROM video WHERE v_id = %s;""", (video_id,))
-            if cursor.fetchone() is not None:
-                cursor.execute(
-                    """UPDATE video SET likes = %s, dislikes = %s,
-                    fav_count = %s, com_count = %s, channel_id = %s,
-                    channel_name = %s, "searchQ" = %s, duration = %s,
-                    url = %s WHERE v_id = %s""",
-                    (LIKES, DISLIKES, FAV, COMMENTS, CHAN_ID, CHAN_TITLE,
-                     search_subject, dur, URL, video_id))
-                connection.commit()
-
-            else:
-                cursor.execute(
-                    """INSERT INTO video
-                        VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
-                    (TITLE, DESCRP, VIEWS, LIKES, DISLIKES, FAV,
-                     COMMENTS, video_id, CHAN_ID, CHAN_TITLE,
-                     search_subject, dur, URL))
-                connection.commit()
-                print("Inserted into Video Table")
-
-            return True
+        # query to see if video is already in db. If yes, update stats, if no, insert
+        cursor.execute("""SELECT * FROM video WHERE v_id = %s;""", (video_id,))
+        if cursor.fetchone() is not None:
+            cursor.execute(
+                """UPDATE video SET likes = %s, dislikes = %s,
+                fav_count = %s, com_count = %s, channel_id = %s,
+                channel_name = %s, "searchQ" = %s, duration = %s,
+                url = %s WHERE v_id = %s""",
+                (LIKES, DISLIKES, FAV, COMMENTS, CHAN_ID, CHAN_TITLE,
+                 search_subject, dur, URL, video_id))
+            connection.commit()
 
         else:
-            return False
+            cursor.execute(
+                """INSERT INTO video
+                    VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);""",
+                (TITLE, DESCRP, VIEWS, LIKES, DISLIKES, FAV,
+                 COMMENTS, video_id, CHAN_ID, CHAN_TITLE,
+                 search_subject, dur, URL))
+            connection.commit()
+            print("Inserted into Video Table")
 
     except KeyError as e:
         print("key error:", e)
@@ -196,7 +189,7 @@ def makeRequestVideoList(search_q, dur):
     # request parameters
     request = youtube.search().list(
         part="snippet,id",
-        q='Intro to Java ' + search_q,
+        q='java ' + search_q,
         type="video",
         maxResults=15,
         order="relevance",
@@ -211,9 +204,11 @@ def makeRequestVideoList(search_q, dur):
         # collect data on search results
         for video in response['items']:
             VIDEO_ID = video['id']['videoId']
+            TITLE = response['items'][0]['snippet']['title']
 
-            # for each video, request more video information about each video result. Return true if added to database
-            if makeRequestVideos(search_q, VIDEO_ID, youtube, dur):
+            if search_q.split()[0].lower() in TITLE.lower():
+                # for each video, request more video information about each video result
+                makeRequestVideos(search_q, VIDEO_ID, youtube, dur)
                 # for each video, request more comment information about each video result
                 makeRequestCommentThread(VIDEO_ID, youtube)
 

@@ -43,7 +43,6 @@ def compute_cosine_similarity(results):
             text = row['title'] + " " + row['clean_descr']
             text_list.append(text)
         df['text'] = text_list
-        print(text_list)
 
         # transform text into count_matrix for similarity between words
         count = CountVectorizer()
@@ -51,8 +50,6 @@ def compute_cosine_similarity(results):
 
         # append df_num to df_text and compute cosine similarity
         cosine_sim = cosine_similarity(count_matrix, count_matrix)
-
-        print(cosine_sim)
 
         # generate recommendations
         for i in range(len(cosine_sim)):
@@ -99,7 +96,7 @@ def recommend(index, df, cosine_sim):
         top_5_indexes = list(score_series.iloc[1:5].index)
         for x in range(0, len(top_5_indexes)):
             recommendations.append(df['url'][top_5_indexes[x]])
-        print(recommendations)
+        # print(recommendations)
     except Exception as e:
         print("Exception in recommend:", e)
 
@@ -109,7 +106,7 @@ def rank_videos(results):
     tally = np.ones((len(results_array), 1))
     for x in range(0, len(results_array)):
         tally[x][0] = (results_array[x][0] - results_array[x][1] + results_array[x][2])
-    print(np.hstack((results_array, tally)))
+    # print(np.hstack((results_array, tally)))
 
 
 def compute_video_similarity(search_q):
@@ -120,5 +117,5 @@ def compute_video_similarity(search_q):
 
 
 if __name__ == "__main__":
-    compute_video_similarity("Skip List")
-    compute_video_similarity("Depth First Search")
+    compute_video_similarity("Generics")
+    compute_video_similarity("Lists")
