@@ -3,6 +3,9 @@
 ## Undergraduate - University of British Columbia
 
 The client github repo can be found at https://github.com/marlieer/ubco-videos
+
+The client web application can be found at http://ubco-videos.herokuapp.com
+
 The complete Thesis report can be found in the pdf titled "Honours in Computer Science"
 
 ### Abstract
